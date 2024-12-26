@@ -10,8 +10,10 @@
     "test": "jest"
   },
   "dependencies": {
+    "jssip": "https://github.com/avodevelopment/RNJsSIP.git",
     "react": "18.3.1",
-    "react-native": "0.76.2"
+    "react-native": "0.76.2",
+    "react-native-webrtc": "^1.84.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
