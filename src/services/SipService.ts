@@ -84,7 +84,7 @@ export const makeCall = (target: string) => {
 
   const options = {
     eventHandlers,
-    mediaConstraints: {audio: true, video: true},
+    mediaConstraints: {audio: true, video: false},
     // sessionTimersExpires: 120,
     rtcOfferConstraints: {
       offerToReceiveAudio: true,
