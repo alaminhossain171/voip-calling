@@ -7,7 +7,12 @@ import {
   Platform,
 } from 'react-native';
 import RNCallKeep from 'react-native-callkeep';
-import {endCall, initializeSIP, makeCall} from './src/services/SipService';
+import {
+  endCall,
+  initializeSIP,
+  makeCall,
+  sipState,
+} from './src/services/SipService';
 
 const requestPermissions = async () => {
   if (Platform.OS === 'android') {
@@ -26,7 +31,7 @@ const App = () => {
     const setupCallKeepAndSIP = async () => {
       const options = {
         ios: {
-          appName: 'My app name',
+          appName: 'Calling App',
         },
         android: {
           alertTitle: 'Permissions required',
@@ -34,16 +39,16 @@ const App = () => {
             'This application needs to access your phone accounts',
           cancelButton: 'Cancel',
           okButton: 'OK',
-          imageName: 'phone_account_icon', // Add your icon in the drawable folder
+          imageName: 'phone_account_icon',
           additionalPermissions: [
             PermissionsAndroid.PERMISSIONS.CALL_PHONE,
-            PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE, // Add any other required permissions
+            PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
           ],
           foregroundService: {
-            channelId: 'com.imchr',
+            channelId: 'com.callingapp',
             channelName: 'Foreground service for my app',
             notificationTitle: 'My app is running in the background',
-            notificationIcon: 'phone_account_icon',
+            notificationIcon: 'ic_launcher.png',
           },
         },
       };
@@ -53,26 +58,45 @@ const App = () => {
         await RNCallKeep.setup(options);
         console.log('RNCallKeep setup success');
 
-        // Request necessary permissions
         await requestPermissions();
 
-        // Initialize SIP service
         initializeSIP(
           'sip:7001@pbx.ibos.io',
           'wss#7001',
           'wss://pbx.ibos.io:8089/ws',
         );
         console.log('SIP service initialized');
+
+        // Register CallKeep events
+        RNCallKeep.addEventListener('didDisplayIncomingCall', data => {
+          console.log('Incoming call displayed', data);
+        });
+
+        RNCallKeep.addEventListener('didReceiveStartCallAction', data => {
+          console.log('Start call action received', data);
+          makeCall(data?.handle);
+        });
+
+        RNCallKeep.addEventListener('endCall', data => {
+          console.log('Call ended by system/user', data);
+          sipState.session?.terminate();
+        });
       } catch (error) {
         console.error('Setup failed', error);
       }
     };
 
     setupCallKeepAndSIP();
+
+    return () => {
+      RNCallKeep.removeEventListener('didDisplayIncomingCall');
+      RNCallKeep.removeEventListener('didReceiveStartCallAction');
+      RNCallKeep.removeEventListener('endCall');
+    };
   }, []);
 
   const startCall = () => {
-    makeCall('120');
+    makeCall('01822421743');
   };
 
   const stopCall = () => {

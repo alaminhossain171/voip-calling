@@ -1,7 +1,9 @@
-//@ts-nocheck
 import JsSIP from 'jssip';
-
-const sipState = {
+import RNCallKeep from 'react-native-callkeep';
+const uniqueCallUuid = `call-${Date.now()}-${Math.random()
+  .toString(36)
+  .substring(2, 15)}`;
+export const sipState = {
   ua: null as JsSIP.UA | null,
   session: null as JsSIP.RTCSession | null,
 };
@@ -45,23 +47,43 @@ export const initializeSIP = async (
 
 const handleIncomingCall = (data: {session: JsSIP.RTCSession}) => {
   sipState.session = data.session;
+
   if (sipState.session.direction === 'incoming') {
-    console.log('Incoming call from:', sipState.session.remote_identity.uri);
-    console.log(JSON.stringify(sipState.session, null, 2));
-    sipState.session.answer({
-      mediaConstraints: {audio: true, video: false},
+    const callerId = sipState.session.remote_identity.uri.toString();
+    console.log('Incoming call from:', callerId);
+
+    RNCallKeep.displayIncomingCall(
+      uniqueCallUuid, // Generate a unique UUID for the call
+      callerId,
+      callerId,
+    );
+
+    RNCallKeep.addEventListener('answerCall', ({callUUID}) => {
+      if (callUUID === uniqueCallUuid) {
+        sipState.session?.answer({
+          mediaConstraints: {audio: true, video: false},
+        });
+
+        sipState.session?.on('confirmed', () => {
+          console.log('Call confirmed');
+        });
+
+        sipState.session?.on('ended', e => {
+          console.log('Call ended:', e.cause);
+          RNCallKeep.endCall(callUUID);
+        });
+
+        sipState.session?.on('failed', e => {
+          console.error('Call failed:', e.cause);
+          RNCallKeep.endCall(callUUID);
+        });
+      }
     });
 
-    sipState.session.on('confirmed', () => {
-      console.log('Call confirmed');
-    });
-
-    sipState.session.on('ended', e => {
-      console.log('Call ended:', e.cause);
-    });
-
-    sipState.session.on('failed', e => {
-      console.error('Call failed:', e.cause);
+    RNCallKeep.addEventListener('endCall', ({callUUID}) => {
+      if (callUUID === uniqueCallUuid) {
+        sipState.session?.terminate();
+      }
     });
   }
 };
@@ -74,8 +96,9 @@ export const makeCall = (target: string) => {
   }
 
   const targetUri = `sip:${target}@pbx.ibos.io`;
-  // console.log(`Attempting to call: ${targetUri}`);
-
+  const callUUID = 'outgoing-call-uuid';
+  console.log(`Attempting to call: ${targetUri}`);
+  RNCallKeep.startCall(callUUID, target, target);
   const eventHandlers = {
     progress: () => {
       console.log('Call is in progress');
@@ -192,6 +215,7 @@ const prioritizeCodec = (sdp: string, codecName: string): string => {
 
 export const endCall = () => {
   if (sipState.session) {
+    RNCallKeep.endCall(uniqueCallUuid);
     sipState.session.terminate();
     console.log('Call terminated');
   } else {
