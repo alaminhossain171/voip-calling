@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import {endCall, initializeSIP, makeCall} from './src/services/SipService';
-
+console.log("hello")
 const requestPermissions = async () => {
   if (Platform.OS === 'android') {
     const granted = await PermissionsAndroid.request(
